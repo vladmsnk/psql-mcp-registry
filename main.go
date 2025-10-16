@@ -7,8 +7,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"psql-mcp-registry/internal/api"
 	"psql-mcp-registry/internal/factory"
 	"psql-mcp-registry/internal/instance_manager"
+	mcpserver "psql-mcp-registry/internal/mcp"
 	"psql-mcp-registry/internal/pg"
 	"psql-mcp-registry/internal/registry"
 	"psql-mcp-registry/internal/router"
@@ -70,21 +72,55 @@ func main() {
 	queryRouter := router.New(instanceRegistry)
 	log.Println("Initialized query router")
 
+	// Create MCP server
+	mcpServer := mcpserver.NewMCPServer(queryRouter, instanceManager)
+	log.Println("Initialized MCP server")
+
+	// Read HTTP API port from environment variable (default: 8080)
+	httpPort := os.Getenv("HTTP_API_PORT")
+	if httpPort == "" {
+		httpPort = "8080"
+	}
+
+	// Create HTTP API server
+	apiServer := api.NewAPIServer(instanceManager, httpPort)
+	log.Printf("Initialized HTTP API server on port %s", httpPort)
+
 	// Log successful initialization
 	log.Println("Application initialized successfully")
-	log.Println("Instance manager is ready to use")
-	log.Println("Query router is ready to use")
+	log.Println("Starting servers...")
 
-	// Wait for interrupt signal
+	// Run both servers in goroutines
+	errChan := make(chan error, 2)
+
+	// Run MCP server over stdio
+	go func() {
+		log.Println("Starting MCP server over stdio...")
+		if err := mcpServer.Run(ctx); err != nil {
+			errChan <- err
+		}
+	}()
+
+	// Run HTTP API server
+	go func() {
+		log.Printf("Starting HTTP API server on :%s", httpPort)
+		if err := apiServer.Run(ctx); err != nil {
+			errChan <- err
+		}
+	}()
+
+	// Wait for interrupt signal or error
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
-	log.Println("Application is running. Press Ctrl+C to exit...")
-	<-sigChan
+	select {
+	case <-sigChan:
+		log.Println("Received interrupt signal, shutting down gracefully...")
+		cancel()
+	case err := <-errChan:
+		log.Printf("Server error: %v", err)
+		cancel()
+	}
 
-	log.Println("Shutting down gracefully...")
-
-	// Use variables to avoid unused variable warning
-	_ = instanceManager
-	_ = queryRouter
+	log.Println("Shutdown complete")
 }

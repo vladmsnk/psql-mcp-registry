@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"psql-mcp-registry/internal/factory"
 	"psql-mcp-registry/internal/model"
 	"psql-mcp-registry/internal/pg"
 )
+
+const ConnectionTimeout = 10 * time.Second
 
 type Implementation struct {
 	registryMap     map[string]*pg.Client
@@ -63,16 +66,22 @@ func (r *Implementation) AddInstanceToRegistry(instance model.Instance) error {
 		return fmt.Errorf("failed to create client for instance %s: %w", instance.Name, err)
 	}
 
-	// Need to assert back to *pg.Client for internal storage
-	// This is safe because our factory returns *pg.Client which implements ClientInterface
 	concreteClient, ok := client.(*pg.Client)
 	if !ok {
 		return fmt.Errorf("client factory returned unexpected type for instance %s", instance.Name)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), ConnectionTimeout)
+	defer cancel()
+
+	if err := concreteClient.Connect(ctx); err != nil {
+		concreteClient.Close()
+		return fmt.Errorf("failed to connect to instance %s: %w", instance.Name, err)
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.registryMap[instance.Name] = concreteClient
 
+	r.registryMap[instance.Name] = concreteClient
 	return nil
 }
