@@ -172,3 +172,86 @@ func formatJSON(data interface{}) string {
 	}
 	return string(jsonBytes)
 }
+
+func (s *MCPServer) handleIndexStats(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input IndexStatsInput,
+) (*mcp.CallToolResult, interface{}, error) {
+	params := make(map[string]interface{})
+	if input.Limit > 0 {
+		params["limit"] = input.Limit
+	}
+
+	data, err := s.executeRouterQuery(ctx, input.InstanceName, model.ActionNameIndexStats, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, data, nil
+}
+
+func (s *MCPServer) handleActiveQueries(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input ActiveQueriesInput,
+) (*mcp.CallToolResult, interface{}, error) {
+	params := make(map[string]interface{})
+	if input.DbName != "" {
+		params["dbName"] = input.DbName
+	}
+	if input.MinDurationSeconds > 0 {
+		params["minDuration"] = input.MinDurationSeconds
+	}
+
+	data, err := s.executeRouterQuery(ctx, input.InstanceName, model.ActionNameActiveQueries, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, data, nil
+}
+
+func (s *MCPServer) handleConnectionStats(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input ConnectionStatsInput,
+) (*mcp.CallToolResult, interface{}, error) {
+	data, err := s.executeRouterQuery(ctx, input.InstanceName, model.ActionNameConnectionStats, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, data, nil
+}
+
+func (s *MCPServer) handleSlowQueries(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input SlowQueriesInput,
+) (*mcp.CallToolResult, interface{}, error) {
+	params := make(map[string]interface{})
+	if input.Limit > 0 {
+		params["limit"] = input.Limit
+	}
+
+	data, err := s.executeRouterQuery(ctx, input.InstanceName, model.ActionNameSlowQueries, params)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, data, nil
+}
+
+func (s *MCPServer) handleDatabaseSizes(
+	ctx context.Context,
+	req *mcp.CallToolRequest,
+	input DatabaseSizesInput,
+) (*mcp.CallToolResult, interface{}, error) {
+	data, err := s.executeRouterQuery(ctx, input.InstanceName, model.ActionNameDatabaseSizes, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nil, data, nil
+}

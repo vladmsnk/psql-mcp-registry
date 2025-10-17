@@ -19,6 +19,11 @@ type ClientInterface interface {
 	GetTablesInfo(ctx context.Context, limit int) ([]TableInfo, error)
 	GetLockingInfo(ctx context.Context, dbName string) ([]LockInfo, error)
 	GetChangedSettings(ctx context.Context) ([]SettingInfo, error)
+	GetIndexStats(ctx context.Context, limit int) ([]IndexStats, error)
+	GetActiveQueries(ctx context.Context, dbName string, minDuration int) ([]ActiveQuery, error)
+	GetConnectionStats(ctx context.Context) (*ConnectionSummary, error)
+	GetSlowQueries(ctx context.Context, limit int) ([]SlowQuery, error)
+	GetDatabaseSizes(ctx context.Context) ([]DatabaseSize, error)
 	Version() *Version
 }
 

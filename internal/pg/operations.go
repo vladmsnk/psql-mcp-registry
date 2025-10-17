@@ -155,14 +155,19 @@ func (c *Client) GetTablesInfo(ctx context.Context, limit int) ([]TableInfo, err
 			&table.SchemaName,
 			&table.TableName,
 			&table.TotalBytes,
+			&table.TableBytes,
+			&table.IndexesBytes,
 			&table.NLiveTup,
 			&table.NDeadTup,
+			&table.DeadRatio,
 			&table.SeqScan,
 			&table.IdxScan,
 			&table.LastVacuum,
 			&table.LastAutovacuum,
 			&table.LastAnalyze,
 			&table.LastAutoanalyze,
+			&table.VacuumCount,
+			&table.AutovacuumCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan table info: %w", err)
@@ -242,4 +247,180 @@ func (c *Client) GetChangedSettings(ctx context.Context) ([]SettingInfo, error) 
 	}
 
 	return settings, nil
+}
+
+// GetIndexStats возвращает статистику использования индексов
+func (c *Client) GetIndexStats(ctx context.Context, limit int) ([]IndexStats, error) {
+	if limit <= 0 {
+		limit = 100 // значение по умолчанию
+	}
+
+	rows, err := c.db.QueryContext(ctx, SelectIndexStats, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query index stats: %w", err)
+	}
+	defer rows.Close()
+
+	var indexes []IndexStats
+
+	for rows.Next() {
+		var index IndexStats
+		err := rows.Scan(
+			&index.SchemaName,
+			&index.TableName,
+			&index.IndexName,
+			&index.IdxScan,
+			&index.IdxTupRead,
+			&index.IdxTupFetch,
+			&index.SizeBytes,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan index stats: %w", err)
+		}
+		indexes = append(indexes, index)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating indexes: %w", err)
+	}
+
+	return indexes, nil
+}
+
+// GetActiveQueries возвращает активные запросы с длительностью выше порога
+func (c *Client) GetActiveQueries(ctx context.Context, dbName string, minDuration int) ([]ActiveQuery, error) {
+	if minDuration <= 0 {
+		minDuration = 5 // значение по умолчанию - 5 секунд
+	}
+
+	rows, err := c.db.QueryContext(ctx, SelectActiveQueries, dbName, minDuration)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query active queries: %w", err)
+	}
+	defer rows.Close()
+
+	var queries []ActiveQuery
+
+	for rows.Next() {
+		var query ActiveQuery
+		err := rows.Scan(
+			&query.PID,
+			&query.Username,
+			&query.Database,
+			&query.State,
+			&query.DurationSeconds,
+			&query.WaitEventType,
+			&query.WaitEvent,
+			&query.Query,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan active query: %w", err)
+		}
+		queries = append(queries, query)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating active queries: %w", err)
+	}
+
+	return queries, nil
+}
+
+// GetConnectionStats возвращает статистику соединений
+func (c *Client) GetConnectionStats(ctx context.Context) (*ConnectionSummary, error) {
+	var stats ConnectionSummary
+
+	err := c.db.QueryRowContext(ctx, SelectConnectionStats).Scan(
+		&stats.TotalConnections,
+		&stats.Active,
+		&stats.Idle,
+		&stats.IdleInTransaction,
+		&stats.Waiting,
+		&stats.MaxConnections,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get connection stats: %w", err)
+	}
+
+	return &stats, nil
+}
+
+// GetSlowQueries возвращает топ медленных запросов из pg_stat_statements
+// Требует установленного extension pg_stat_statements
+func (c *Client) GetSlowQueries(ctx context.Context, limit int) ([]SlowQuery, error) {
+	// Проверить наличие pg_stat_statements
+	var exists bool
+	err := c.db.QueryRowContext(ctx,
+		"SELECT EXISTS(SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements')").Scan(&exists)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check pg_stat_statements: %w", err)
+	}
+	if !exists {
+		return nil, fmt.Errorf("pg_stat_statements extension is not installed")
+	}
+
+	if limit <= 0 {
+		limit = 20 // значение по умолчанию
+	}
+
+	rows, err := c.db.QueryContext(ctx, SelectSlowQueries, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query slow queries: %w", err)
+	}
+	defer rows.Close()
+
+	var queries []SlowQuery
+
+	for rows.Next() {
+		var query SlowQuery
+		err := rows.Scan(
+			&query.Query,
+			&query.Calls,
+			&query.TotalExecTime,
+			&query.MeanExecTime,
+			&query.StddevExecTime,
+			&query.Rows,
+			&query.CacheHitPercent,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan slow query: %w", err)
+		}
+		queries = append(queries, query)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating slow queries: %w", err)
+	}
+
+	return queries, nil
+}
+
+// GetDatabaseSizes возвращает размеры всех баз данных
+func (c *Client) GetDatabaseSizes(ctx context.Context) ([]DatabaseSize, error) {
+	rows, err := c.db.QueryContext(ctx, SelectDatabaseSizes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query database sizes: %w", err)
+	}
+	defer rows.Close()
+
+	var databases []DatabaseSize
+
+	for rows.Next() {
+		var db DatabaseSize
+		err := rows.Scan(
+			&db.DatabaseName,
+			&db.SizeBytes,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan database size: %w", err)
+		}
+		databases = append(databases, db)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating databases: %w", err)
+	}
+
+	return databases, nil
 }

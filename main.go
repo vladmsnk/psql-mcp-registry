@@ -82,9 +82,16 @@ func main() {
 		httpPort = "8080"
 	}
 
+	// Read MCP SSE port from environment variable (default: 3000)
+	mcpPort := os.Getenv("MCP_PORT")
+	if mcpPort == "" {
+		mcpPort = "3000"
+	}
+
 	// Create HTTP API server
 	apiServer := api.NewAPIServer(instanceManager, httpPort)
 	log.Printf("Initialized HTTP API server on port %s", httpPort)
+	log.Printf("MCP server will use SSE transport on port %s", mcpPort)
 
 	// Log successful initialization
 	log.Println("Application initialized successfully")
@@ -93,10 +100,12 @@ func main() {
 	// Run both servers in goroutines
 	errChan := make(chan error, 2)
 
-	// Run MCP server over stdio
+	// Run MCP server with SSE transport
 	go func() {
-		log.Println("Starting MCP server over stdio...")
-		if err := mcpServer.Run(ctx); err != nil {
+		log.Printf("Starting MCP server with SSE transport on :%s", mcpPort)
+		log.Printf("SSE endpoint: http://localhost:%s/sse", mcpPort)
+		log.Printf("Test with: npx @modelcontextprotocol/inspector http://localhost:%s/sse", mcpPort)
+		if err := mcpServer.RunWithSSE(ctx, mcpPort); err != nil {
 			errChan <- err
 		}
 	}()

@@ -3,6 +3,7 @@ package mcp
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"psql-mcp-registry/internal/model"
 	"psql-mcp-registry/internal/router"
@@ -98,6 +99,36 @@ func (s *MCPServer) registerTools() {
 		Name:        "version",
 		Description: "Get PostgreSQL version information",
 	}, s.handleVersion)
+
+	// Index Stats
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "index_stats",
+		Description: "Get index usage statistics to identify unused or inefficient indexes",
+	}, s.handleIndexStats)
+
+	// Active Queries
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "active_queries",
+		Description: "Get currently running queries with duration exceeding threshold for real-time performance diagnostics",
+	}, s.handleActiveQueries)
+
+	// Connection Stats
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "connection_stats",
+		Description: "Get connection pool statistics including active, idle, and waiting connections",
+	}, s.handleConnectionStats)
+
+	// Slow Queries
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "slow_queries",
+		Description: "Get top slow queries from pg_stat_statements with execution time and cache hit rate metrics",
+	}, s.handleSlowQueries)
+
+	// Database Sizes
+	mcp.AddTool(s.server, &mcp.Tool{
+		Name:        "database_sizes",
+		Description: "Get sizes of all databases to monitor disk space usage and data growth",
+	}, s.handleDatabaseSizes)
 }
 
 // Run starts the MCP server over stdio transport
@@ -110,7 +141,25 @@ func (s *MCPServer) RunWithTransport(ctx context.Context, transport mcp.Transpor
 	return s.server.Run(ctx, transport)
 }
 
-// createRouterRequest creates a router.QueryRequest from instance name, action, and parameters
+// RunWithSSE starts the MCP server with SSE transport over HTTP
+func (s *MCPServer) RunWithSSE(ctx context.Context, port string) error {
+	handler := mcp.NewSSEHandler(func(*http.Request) *mcp.Server {
+		return s.server
+	}, nil)
+
+	httpServer := &http.Server{
+		Addr:    ":" + port,
+		Handler: handler,
+	}
+
+	go func() {
+		<-ctx.Done()
+		httpServer.Shutdown(context.Background())
+	}()
+
+	return httpServer.ListenAndServe()
+}
+
 func createRouterRequest(instanceName string, action model.ActionName, params map[string]interface{}) router.QueryRequest {
 	return router.QueryRequest{
 		InstanceName: instanceName,
@@ -119,7 +168,6 @@ func createRouterRequest(instanceName string, action model.ActionName, params ma
 	}
 }
 
-// executeRouterQuery executes a query through the router and returns the response
 func (s *MCPServer) executeRouterQuery(ctx context.Context, instanceName string, action model.ActionName, params map[string]interface{}) (interface{}, error) {
 	instance, err := s.manager.GetInstance(ctx, instanceName)
 	if err != nil {
