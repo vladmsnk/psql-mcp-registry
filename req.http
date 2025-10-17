@@ -1,0 +1,45 @@
+###
+
+# curl -X POST http://localhost:8080/api/v1/instances
+#  -H "Content-Type: application/json"
+#  -d '{
+#    "name": "prod",
+#    "database_name": "testdb",
+#    "description": "Production instance",
+#    "creator_username": "admin"
+#  }'
+POST http://localhost:8080/api/v1/instances
+Content-Type: application/json
+
+{
+  "name": "prod",
+  "database_name": "testdb",
+  "description": "Production instance",
+  "creator_username": "admin"
+}
+
+
+
+###
+
+# curl -X POST http://localhost:8080/api/v1/instances
+#  -H "Content-Type: application/json"
+#  -d '{
+#    "name": "dev",
+#    "database_name": "devdb",
+#    "description": "Development instance",
+#    "creator_username": "admin"
+#  }'
+POST http://localhost:8080/api/v1/instances
+Content-Type: application/json
+
+{
+  "name": "dev",
+  "database_name": "devdb",
+  "description": "Development instance",
+  "creator_username": "admin"
+}
+
+###
+
+

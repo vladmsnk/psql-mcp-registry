@@ -17,6 +17,82 @@ The registry implements a fourth variant pattern that:
 3. Provides thread-safe access to clients
 4. Supports graceful shutdown with `Close()`
 
+## HTTP API
+
+The service provides an HTTP API for managing PostgreSQL instances alongside the MCP protocol interface. Both servers run in parallel.
+
+### Environment Variables
+
+- `HTTP_API_PORT` - Port for the HTTP API server (default: `8080`)
+- `GIN_MODE` - Gin framework mode: `release` or `debug` (default: `release`)
+
+### API Endpoints
+
+#### Register Instance
+```bash
+POST /api/v1/instances
+Content-Type: application/json
+
+{
+  "name": "prod_db",
+  "database_name": "production",
+  "description": "Production PostgreSQL instance",
+  "creator_username": "admin"
+}
+```
+
+**Response (201 Created):**
+```json
+{
+  "id": 1,
+  "name": "prod_db",
+  "database_name": "production",
+  "description": "Production PostgreSQL instance",
+  "creator_username": "admin",
+  "status": "active",
+  "created_at": "2025-10-15T10:30:00Z",
+  "updated_at": "2025-10-15T10:30:00Z"
+}
+```
+
+**Error Responses:**
+- `400 Bad Request` - Invalid request body or missing required fields
+- `409 Conflict` - Instance with this name already exists
+- `500 Internal Server Error` - Registration failed
+
+#### Health Check
+```bash
+GET /health
+```
+
+**Response (200 OK):**
+```json
+{
+  "status": "healthy"
+}
+```
+
+### Usage Examples
+
+**Register a new instance:**
+```bash
+curl -X POST http://localhost:8080/api/v1/instances \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "prod_db",
+    "database_name": "production",
+    "description": "Production PostgreSQL instance",
+    "creator_username": "admin"
+  }'
+```
+
+**Check API health:**
+```bash
+curl http://localhost:8080/health
+```
+
+**Note:** Instance connection details must be configured via environment variables following the `PSQL_INSTANCE_{NAME}_*` pattern (see Environment Variable Format section below).
+
 ## Quick Start
 
 ### 1. Start Test PostgreSQL Instances

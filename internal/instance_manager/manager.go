@@ -9,6 +9,7 @@ import (
 type Manager interface {
 	RegisterInstance(ctx context.Context, instance model.Instance) error
 	GetInstance(ctx context.Context, instanceName string) (*model.Instance, error)
+	ListInstances(ctx context.Context) ([]model.Instance, error)
 }
 
 //go:generate mockery --case snake --name Storage

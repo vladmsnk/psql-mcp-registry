@@ -51,17 +51,22 @@ type WalActivity struct {
 
 // TableInfo - статистика по таблице
 type TableInfo struct {
-	SchemaName      string        `json:"schema_name"`
-	TableName       string        `json:"table_name"`
-	TotalBytes      int64         `json:"total_bytes"`
-	NLiveTup        sql.NullInt64 `json:"n_live_tup"`
-	NDeadTup        sql.NullInt64 `json:"n_dead_tup"`
-	SeqScan         sql.NullInt64 `json:"seq_scan"`
-	IdxScan         sql.NullInt64 `json:"idx_scan"`
-	LastVacuum      sql.NullTime  `json:"last_vacuum"`
-	LastAutovacuum  sql.NullTime  `json:"last_autovacuum"`
-	LastAnalyze     sql.NullTime  `json:"last_analyze"`
-	LastAutoanalyze sql.NullTime  `json:"last_autoanalyze"`
+	SchemaName      string          `json:"schema_name"`
+	TableName       string          `json:"table_name"`
+	TotalBytes      int64           `json:"total_bytes"`
+	TableBytes      int64           `json:"table_bytes"`
+	IndexesBytes    int64           `json:"indexes_bytes"`
+	NLiveTup        sql.NullInt64   `json:"n_live_tup"`
+	NDeadTup        sql.NullInt64   `json:"n_dead_tup"`
+	DeadRatio       sql.NullFloat64 `json:"dead_ratio"`
+	SeqScan         sql.NullInt64   `json:"seq_scan"`
+	IdxScan         sql.NullInt64   `json:"idx_scan"`
+	LastVacuum      sql.NullTime    `json:"last_vacuum"`
+	LastAutovacuum  sql.NullTime    `json:"last_autovacuum"`
+	LastAnalyze     sql.NullTime    `json:"last_analyze"`
+	LastAutoanalyze sql.NullTime    `json:"last_autoanalyze"`
+	VacuumCount     sql.NullInt64   `json:"vacuum_count"`
+	AutovacuumCount sql.NullInt64   `json:"autovacuum_count"`
 }
 
 // LockInfo - информация о блокировках
@@ -106,4 +111,54 @@ func (v *Version) SupportsCheckpointer() bool {
 // SupportsBlockingPids проверяет, поддерживает ли версия pg_blocking_pids (PG ≥9.6)
 func (v *Version) SupportsBlockingPids() bool {
 	return v.Major >= 10 || (v.Major == 9 && v.Minor >= 6)
+}
+
+// IndexStats - статистика по индексу
+type IndexStats struct {
+	SchemaName  string        `json:"schema_name"`
+	TableName   string        `json:"table_name"`
+	IndexName   string        `json:"index_name"`
+	IdxScan     sql.NullInt64 `json:"idx_scan"`
+	IdxTupRead  sql.NullInt64 `json:"idx_tup_read"`
+	IdxTupFetch sql.NullInt64 `json:"idx_tup_fetch"`
+	SizeBytes   int64         `json:"size_bytes"`
+}
+
+// ActiveQuery - информация об активном запросе
+type ActiveQuery struct {
+	PID             int             `json:"pid"`
+	Username        sql.NullString  `json:"username"`
+	Database        sql.NullString  `json:"database"`
+	State           sql.NullString  `json:"state"`
+	DurationSeconds sql.NullFloat64 `json:"duration_seconds"`
+	WaitEventType   sql.NullString  `json:"wait_event_type"`
+	WaitEvent       sql.NullString  `json:"wait_event"`
+	Query           sql.NullString  `json:"query"`
+}
+
+// ConnectionSummary - сводная статистика соединений
+type ConnectionSummary struct {
+	TotalConnections  int `json:"total_connections"`
+	Active            int `json:"active"`
+	Idle              int `json:"idle"`
+	IdleInTransaction int `json:"idle_in_transaction"`
+	Waiting           int `json:"waiting"`
+	MaxConnections    int `json:"max_connections"`
+}
+
+// SlowQuery - информация о медленном запросе из pg_stat_statements
+type SlowQuery struct {
+	Query           string          `json:"query"`
+	Calls           int64           `json:"calls"`
+	TotalExecTime   float64         `json:"total_exec_time"`
+	MeanExecTime    float64         `json:"mean_exec_time"`
+	StddevExecTime  float64         `json:"stddev_exec_time"`
+	Rows            int64           `json:"rows"`
+	CacheHitPercent sql.NullFloat64 `json:"cache_hit_percent"`
+}
+
+// DatabaseSize - информация о размере базы данных
+type DatabaseSize struct {
+	DatabaseName string `json:"database_name"`
+	SizeBytes    int64  `json:"size_bytes"`
 }

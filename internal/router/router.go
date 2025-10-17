@@ -79,6 +79,25 @@ func (r *Router) RouteQuery(ctx context.Context, req QueryRequest, instance mode
 			data = version
 		}
 
+	case model.ActionNameIndexStats:
+		limit := getIntParam(req.Parameters, "limit", 100)
+		data, err = client.GetIndexStats(ctx, limit)
+
+	case model.ActionNameActiveQueries:
+		dbName := getStringParam(req.Parameters, "dbName", "postgres")
+		minDuration := getIntParam(req.Parameters, "minDuration", 5)
+		data, err = client.GetActiveQueries(ctx, dbName, minDuration)
+
+	case model.ActionNameConnectionStats:
+		data, err = client.GetConnectionStats(ctx)
+
+	case model.ActionNameSlowQueries:
+		limit := getIntParam(req.Parameters, "limit", 20)
+		data, err = client.GetSlowQueries(ctx, limit)
+
+	case model.ActionNameDatabaseSizes:
+		data, err = client.GetDatabaseSizes(ctx)
+
 	default:
 		err = fmt.Errorf("unsupported action: %s", req.Action)
 	}

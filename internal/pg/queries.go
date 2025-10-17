@@ -80,20 +80,26 @@ FROM pg_stat_wal;
 
 	// SelectTablesInfoLight - лёгкая статистика по таблицам
 	// Показывает размер, сканы, мёртвые строки, последние VACUUM/ANALYZE
+	// Включает bloat-метрики и детализацию размеров
 	// $1 - лимит (по умолчанию 200)
 	SelectTablesInfoLight = `
 SELECT
   schemaname,
   relname        AS table_name,
   pg_total_relation_size(relid) AS total_bytes,
+  pg_relation_size(relid) AS table_bytes,
+  pg_total_relation_size(relid) - pg_relation_size(relid) AS indexes_bytes,
   n_live_tup,
   n_dead_tup,
+  ROUND(100.0 * n_dead_tup / NULLIF(n_live_tup + n_dead_tup, 0), 2) AS dead_ratio,
   seq_scan,
   idx_scan,
   last_vacuum,
   last_autovacuum,
   last_analyze,
-  last_autoanalyze
+  last_autoanalyze,
+  vacuum_count,
+  autovacuum_count
 FROM pg_stat_user_tables
 WHERE (n_live_tup + COALESCE(seq_scan,0) + COALESCE(idx_scan,0)) > 0
 ORDER BY total_bytes DESC
@@ -130,5 +136,84 @@ SELECT
 FROM pg_settings
 WHERE source <> 'default'
 ORDER BY name;
+`
+
+	// SelectIndexStats - статистика использования индексов
+	// Помогает выявить неиспользуемые или неэффективные индексы
+	// $1 - лимит (по умолчанию 100)
+	SelectIndexStats = `
+SELECT
+  schemaname,
+  tablename,
+  indexrelname AS index_name,
+  idx_scan,
+  idx_tup_read,
+  idx_tup_fetch,
+  pg_relation_size(indexrelid) AS size_bytes
+FROM pg_stat_user_indexes
+ORDER BY pg_relation_size(indexrelid) DESC
+LIMIT COALESCE($1, 100);
+`
+
+	// SelectActiveQueries - активные запросы с фильтром по длительности
+	// Показывает долгие запросы для диагностики проблем производительности
+	// $1 - имя БД, $2 - минимальная длительность в секундах (по умолчанию 5)
+	SelectActiveQueries = `
+SELECT
+  pid,
+  usename,
+  datname,
+  state,
+  EXTRACT(EPOCH FROM (now() - query_start)) AS duration_seconds,
+  wait_event_type,
+  wait_event,
+  query
+FROM pg_stat_activity
+WHERE datname = $1
+  AND state != 'idle'
+  AND query_start IS NOT NULL
+  AND (now() - query_start) > make_interval(secs => $2)
+ORDER BY query_start;
+`
+
+	// SelectConnectionStats - статистика соединений с группировкой по состояниям
+	// Помогает оценить нагрузку на connection pool
+	SelectConnectionStats = `
+SELECT
+  COUNT(*) as total_connections,
+  COUNT(*) FILTER (WHERE state = 'active') as active,
+  COUNT(*) FILTER (WHERE state = 'idle') as idle,
+  COUNT(*) FILTER (WHERE state = 'idle in transaction') as idle_in_transaction,
+  COUNT(*) FILTER (WHERE wait_event IS NOT NULL) as waiting,
+  (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') as max_connections
+FROM pg_stat_activity;
+`
+
+	// SelectSlowQueries - топ медленных запросов из pg_stat_statements
+	// Требует установленного extension pg_stat_statements
+	// $1 - лимит (по умолчанию 20)
+	SelectSlowQueries = `
+SELECT
+  query,
+  calls,
+  total_exec_time,
+  mean_exec_time,
+  stddev_exec_time,
+  rows,
+  100.0 * shared_blks_hit / NULLIF(shared_blks_hit + shared_blks_read, 0) AS cache_hit_percent
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT COALESCE($1, 20);
+`
+
+	// SelectDatabaseSizes - размеры всех баз данных
+	// Помогает мониторить рост данных
+	SelectDatabaseSizes = `
+SELECT
+  datname,
+  pg_database_size(datname) AS size_bytes
+FROM pg_database
+WHERE datistemplate = false
+ORDER BY pg_database_size(datname) DESC;
 `
 )

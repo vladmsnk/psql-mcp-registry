@@ -17,12 +17,12 @@ func (i *Implementation) RegisterInstance(ctx context.Context, instance model.In
 		return ErrInstanceAlreadyExists
 	}
 
-	err = i.storage.CreateInstance(ctx, &instance)
+	err = i.registry.AddInstanceToRegistry(instance)
 	if err != nil {
 		return err
 	}
 
-	err = i.registry.AddInstanceToRegistry(instance)
+	err = i.storage.CreateInstance(ctx, &instance)
 	if err != nil {
 		return err
 	}

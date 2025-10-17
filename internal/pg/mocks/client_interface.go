@@ -14,6 +14,36 @@ type ClientInterface struct {
 	mock.Mock
 }
 
+// GetActiveQueries provides a mock function with given fields: ctx, dbName, minDuration
+func (_m *ClientInterface) GetActiveQueries(ctx context.Context, dbName string, minDuration int) ([]pg.ActiveQuery, error) {
+	ret := _m.Called(ctx, dbName, minDuration)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetActiveQueries")
+	}
+
+	var r0 []pg.ActiveQuery
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) ([]pg.ActiveQuery, error)); ok {
+		return rf(ctx, dbName, minDuration)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) []pg.ActiveQuery); ok {
+		r0 = rf(ctx, dbName, minDuration)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]pg.ActiveQuery)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, dbName, minDuration)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetCacheHitRateDB provides a mock function with given fields: ctx, dbName
 func (_m *ClientInterface) GetCacheHitRateDB(ctx context.Context, dbName string) (*pg.CacheHitRate, error) {
 	ret := _m.Called(ctx, dbName)
@@ -134,6 +164,36 @@ func (_m *ClientInterface) GetCheckpointsStats(ctx context.Context) (*pg.Checkpo
 	return r0, r1
 }
 
+// GetConnectionStats provides a mock function with given fields: ctx
+func (_m *ClientInterface) GetConnectionStats(ctx context.Context) (*pg.ConnectionSummary, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetConnectionStats")
+	}
+
+	var r0 *pg.ConnectionSummary
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) (*pg.ConnectionSummary, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) *pg.ConnectionSummary); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*pg.ConnectionSummary)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetDatabaseOverview provides a mock function with given fields: ctx, dbName
 func (_m *ClientInterface) GetDatabaseOverview(ctx context.Context, dbName string) (*pg.DatabaseOverview, error) {
 	ret := _m.Called(ctx, dbName)
@@ -164,6 +224,66 @@ func (_m *ClientInterface) GetDatabaseOverview(ctx context.Context, dbName strin
 	return r0, r1
 }
 
+// GetDatabaseSizes provides a mock function with given fields: ctx
+func (_m *ClientInterface) GetDatabaseSizes(ctx context.Context) ([]pg.DatabaseSize, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDatabaseSizes")
+	}
+
+	var r0 []pg.DatabaseSize
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]pg.DatabaseSize, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []pg.DatabaseSize); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]pg.DatabaseSize)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetIndexStats provides a mock function with given fields: ctx, limit
+func (_m *ClientInterface) GetIndexStats(ctx context.Context, limit int) ([]pg.IndexStats, error) {
+	ret := _m.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetIndexStats")
+	}
+
+	var r0 []pg.IndexStats
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]pg.IndexStats, error)); ok {
+		return rf(ctx, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []pg.IndexStats); ok {
+		r0 = rf(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]pg.IndexStats)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, limit)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetLockingInfo provides a mock function with given fields: ctx, dbName
 func (_m *ClientInterface) GetLockingInfo(ctx context.Context, dbName string) ([]pg.LockInfo, error) {
 	ret := _m.Called(ctx, dbName)
@@ -187,6 +307,36 @@ func (_m *ClientInterface) GetLockingInfo(ctx context.Context, dbName string) ([
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, dbName)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetSlowQueries provides a mock function with given fields: ctx, limit
+func (_m *ClientInterface) GetSlowQueries(ctx context.Context, limit int) ([]pg.SlowQuery, error) {
+	ret := _m.Called(ctx, limit)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSlowQueries")
+	}
+
+	var r0 []pg.SlowQuery
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int) ([]pg.SlowQuery, error)); ok {
+		return rf(ctx, limit)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int) []pg.SlowQuery); ok {
+		r0 = rf(ctx, limit)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]pg.SlowQuery)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int) error); ok {
+		r1 = rf(ctx, limit)
 	} else {
 		r1 = ret.Error(1)
 	}
